@@ -4,9 +4,8 @@ __pycache__/
 venv/
 
 # Data & models (DO NOT PUSH)
-dataset/
-embeddings/
-models/
+
+models/*.onnx
 
 # OS
 .DS_Store
