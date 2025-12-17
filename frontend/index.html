@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Celebrity Twin Finder ✨</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+
+    <style>
+        .scan-animation {
+            animation: pulse 1s infinite;
+        }
+        @keyframes pulse {
+            0% { transform: scale(1); opacity: 0.7; }
+            50% { transform: scale(1.05); opacity: 1; }
+            100% { transform: scale(1); opacity: 0.7; }
+        }
+
+        .fade-in {
+            animation: fadeIn 0.5s forwards;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+
+<body class="bg-gradient-to-br from-purple-600 to-indigo-700 min-h-screen text-white">
+
+    <div class="container mx-auto max-w-lg pt-10 pb-20 px-4">
+
+        <h1 class="text-4xl font-bold text-center mb-6">
+            🌟 Celebrity Twin Finder
+        </h1>
+        <p class="text-center opacity-80 mb-8">
+            Upload your photo and discover your celebrity look-alike!
+        </p>
+
+        <!-- Upload Box -->
+        <label id="uploadBox"
+            class="block bg-white/10 backdrop-blur-lg border-2 border-dashed border-white/30 rounded-xl p-8 text-center cursor-pointer hover:bg-white/20 transition">
+            <input type="file" id="fileInput" class="hidden" accept="image/*" />
+            <div>
+                <p class="text-lg">📷 Tap to upload your face</p>
+                <p class="text-sm opacity-70 mt-1">or drag and drop</p>
+            </div>
+        </label>
+
+        <!-- Scanning Animation -->
+        <div id="loadingSection" class="hidden mt-8 text-center">
+            <div class="scan-animation text-3xl mb-3">🔍</div>
+            <p class="text-lg">Scanning your face…</p>
+        </div>
+
+        <!-- Result Section -->
+        <div id="resultSection" class="hidden fade-in mt-10 bg-white/10 backdrop-blur-lg p-6 rounded-xl">
+
+            <div class="text-center mb-5">
+    <div class="flex justify-center items-center gap-6 mb-5">
+
+        <div>
+            <p class="mb-2 opacity-80">You</p>
+            <img id="facePreview" class="rounded-xl w-36 h-36 object-cover border-4 border-white/40" />
+        </div>
+
+        <div class="text-4xl">✨</div>
+
+        <div>
+            <p class="mb-2 opacity-80">Celebrity</p>
+            <img id="celebrityPreview" class="rounded-xl w-36 h-36 object-cover border-4 border-yellow-400" />
+        </div>
+
+    </div>
+
+    <h2 class="text-2xl font-bold">Your Celebrity Twin Is:</h2>
+    <p id="matchName" class="text-3xl font-extrabold mt-2"></p>
+    <p id="matchScore" class="text-lg opacity-80 mt-1"></p>
+</div>
+
+
+            <h3 class="text-xl font-bold mt-6 mb-2">Top 5 Matches</h3>
+            <ul id="topFiveList" class="space-y-2"></ul>
+
+            <h3 class="text-xl font-bold mt-6 mb-2">Feature Similarity</h3>
+            <div id="featureBars"></div>
+
+        </div>
+
+    </div>
+
+<script>
+const API_URL = "http://192.168.100.59:8000/predict";
+
+const uploadBox = document.getElementById("uploadBox");
+const fileInput = document.getElementById("fileInput");
+const loadingSection = document.getElementById("loadingSection");
+const resultSection = document.getElementById("resultSection");
+const matchName = document.getElementById("matchName");
+const matchScore = document.getElementById("matchScore");
+const facePreview = document.getElementById("facePreview");
+const celebrityPreview = document.getElementById("celebrityPreview");
+const topFiveList = document.getElementById("topFiveList");
+const featureBars = document.getElementById("featureBars");
+
+// Click upload
+uploadBox.addEventListener("click", () => fileInput.click());
+
+// Auto-process when image selected
+fileInput.addEventListener("change", () => {
+    if (fileInput.files.length > 0) {
+        sendImage(fileInput.files[0]);
+    }
+});
+
+async function sendImage(file) {
+    // Reset UI
+    resultSection.classList.add("hidden");
+    loadingSection.classList.remove("hidden");
+
+    const formData = new FormData();
+    formData.append("file", file);
+
+    const res = await fetch(API_URL, {
+        method: "POST",
+        body: formData
+    });
+
+    const data = await res.json();
+
+    loadingSection.classList.add("hidden");
+
+    // Fill UI with results
+    const top = data.top_match;
+    matchName.textContent = top.celebrity_id.replace(/_/g, " ");
+    matchScore.textContent = "Similarity: " + top.similarity.toFixed(2) + "%";
+
+    // Show preview
+    facePreview.src = "data:image/jpeg;base64," + data.face_preview;
+    if (data.celebrity_preview) {
+    celebrityPreview.src = "data:image/jpeg;base64," + data.celebrity_preview;
+}
+
+
+    // Top 5 List
+    topFiveList.innerHTML = "";
+    data.top_5.forEach((item) => {
+        let li = document.createElement("li");
+        li.innerHTML = `<span class="font-bold">${item.celebrity_id.replace(/_/g, " ")}</span> — 
+                        <span>${item.similarity.toFixed(2)}%</span>`;
+        topFiveList.appendChild(li);
+    });
+
+    // Feature Bars
+    featureBars.innerHTML = "";
+    for (const [feature, value] of Object.entries(data.feature_similarity)) {
+        const bar = `
+        <div class="mb-3">
+            <p class="capitalize mb-1">${feature}: ${value.toFixed(2)}%</p>
+            <div class="w-full bg-white/20 h-3 rounded overflow-hidden">
+                <div class="bg-green-400 h-3" style="width: ${value}%;"></div>
+            </div>
+        </div>`;
+        featureBars.innerHTML += bar;
+    }
+
+    resultSection.classList.remove("hidden");
+    resultSection.classList.add("fade-in");
+
+    // Confetti 🎉
+    confetti({
+        particleCount: 120,
+        spread: 60,
+        origin: { y: 0.6 }
+    });
+}
+</script>
+
+</body>
+</html>

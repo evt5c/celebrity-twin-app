@@ -1,0 +1,13 @@
+# Python
+__pycache__/
+*.pyc
+venv/
+
+# Data & models (DO NOT PUSH)
+dataset/
+embeddings/
+models/
+
+# OS
+.DS_Store
+Thumbs.db

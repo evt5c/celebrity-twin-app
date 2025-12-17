@@ -1,0 +1,9 @@
+in cmd paste these:
+
+cd C:\Users\stell\celebtwin
+venv\Scripts\activate
+uvicorn backend.app:app --host 0.0.0.0 --port 8000
+
+
+then in frontend/ open index.html
+enjoy
